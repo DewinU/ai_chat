@@ -17,6 +17,8 @@ import { Textarea } from '@/shared/ui/textarea'
 
 import type { ChatInitialPayload } from '../../../../lib/types'
 
+import { MessageMarkdown } from './chat-markdown'
+
 export type { ChatMessageDTO } from '../../../../lib/types'
 
 const replySchema = z.object({
@@ -189,9 +191,7 @@ export function ChatRoom({
                   {showStreamSkeleton ? (
                     <AssistantReplySkeletonBody />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {live || '…'}
-                    </p>
+                    <MessageMarkdown source={live ?? ''} />
                   )}
                 </CardContent>
               </Card>
