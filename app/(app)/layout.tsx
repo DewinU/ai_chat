@@ -1,27 +1,23 @@
-import prisma from "@/lib/prisma"
+import { Suspense } from 'react'
 
-import { Sidebar, type SidebarConversation } from "./sidebar"
+import { loadSidebarConversations } from '../../lib/data'
+import { SidebarDeferred } from './sidebar-deferred'
+import { SidebarLoading } from './sidebar-loading'
 
-export const dynamic = "force-dynamic"
+export const dynamic = 'force-dynamic'
 
-export default async function AppShellLayout({
+export default function AppShellLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const rows = await prisma.conversation.findMany({
-    orderBy: { createdAt: "desc" },
-    select: { id: true, title: true, createdAt: true },
-  })
-  const conversations: SidebarConversation[] = rows.map((c) => ({
-    id: c.id,
-    title: c.title,
-    createdAt: c.createdAt.toISOString(),
-  }))
+  const conversationsPromise = loadSidebarConversations()
 
   return (
     <div className="flex min-h-0 flex-1">
-      <Sidebar conversations={conversations} />
+      <Suspense fallback={<SidebarLoading />}>
+        <SidebarDeferred conversationsPromise={conversationsPromise} />
+      </Suspense>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </div>
   )

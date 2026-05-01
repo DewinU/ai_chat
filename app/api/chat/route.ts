@@ -1,9 +1,9 @@
-import { after } from "next/server"
-import { NextResponse } from "next/server"
-import { z } from "zod"
+import { after } from 'next/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
 
-import prisma from "@/lib/prisma"
-import { runAssistantGeneration } from "@/lib/stream-assistant"
+import prisma from '@/lib/prisma'
+import { runAssistantGeneration } from '@/lib/stream-assistant'
 
 export const maxDuration = 300
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   try {
     json = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
   const parsed = bodySchema.safeParse(json)
   if (!parsed.success) {
@@ -26,29 +26,28 @@ export async function POST(request: Request) {
   const { prompt, conversationId } = parsed.data
 
   if (!conversationId) {
-    const title = prompt.slice(0, 80).trim() || "New chat"
-    const { conversationId: convId, assistantMessageId } = await prisma.$transaction(
-      async (tx) => {
+    const title = prompt.slice(0, 80).trim() || 'New chat'
+    const { conversationId: convId, assistantMessageId } =
+      await prisma.$transaction(async tx => {
         const conv = await tx.conversation.create({ data: { title } })
         await tx.message.create({
           data: {
             conversationId: conv.id,
-            role: "user",
+            role: 'user',
             content: prompt,
-            status: "completed",
+            status: 'completed',
           },
         })
         const assistant = await tx.message.create({
           data: {
             conversationId: conv.id,
-            role: "assistant",
-            content: "",
-            status: "streaming",
+            role: 'assistant',
+            content: '',
+            status: 'streaming',
           },
         })
         return { conversationId: conv.id, assistantMessageId: assistant.id }
-      }
-    )
+      })
     after(async () => {
       await runAssistantGeneration({
         conversationId: convId,
@@ -65,37 +64,43 @@ export async function POST(request: Request) {
     where: { id: conversationId },
     include: {
       messages: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: 1,
       },
     },
   })
   if (!convo) {
-    return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Conversation not found' },
+      { status: 404 },
+    )
   }
   const last = convo.messages[0]
-  if (last?.status === "streaming") {
+  if (last?.status === 'streaming') {
     return NextResponse.json(
-      { error: "Wait for the current reply to finish before sending another message." },
-      { status: 409 }
+      {
+        error:
+          'Wait for the current reply to finish before sending another message.',
+      },
+      { status: 409 },
     )
   }
 
-  const assistantMessageId = await prisma.$transaction(async (tx) => {
+  const assistantMessageId = await prisma.$transaction(async tx => {
     await tx.message.create({
       data: {
         conversationId,
-        role: "user",
+        role: 'user',
         content: prompt,
-        status: "completed",
+        status: 'completed',
       },
     })
     const assistant = await tx.message.create({
       data: {
         conversationId,
-        role: "assistant",
-        content: "",
-        status: "streaming",
+        role: 'assistant',
+        content: '',
+        status: 'streaming',
       },
     })
     return assistant.id

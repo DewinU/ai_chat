@@ -1,33 +1,35 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
-import { cn } from "@/shared/lib/utils"
-import { ScrollArea } from "@/shared/ui/scroll-area"
+import { cn } from '@/shared/lib/utils'
+import { ScrollArea } from '@/shared/ui/scroll-area'
 
-export type SidebarConversation = {
-  id: string
-  title: string
-  createdAt: string
-}
+import type { SidebarConversation } from '../../lib/types'
 
-export function Sidebar({ conversations }: { conversations: SidebarConversation[] }) {
+export type { SidebarConversation }
+
+export function Sidebar({
+  conversations,
+}: {
+  conversations: SidebarConversation[]
+}) {
   const pathname = usePathname()
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
-      <div className="border-b border-sidebar-border px-3 py-3">
+    <aside className="border-border bg-sidebar text-sidebar-foreground flex w-64 shrink-0 flex-col border-r">
+      <div className="border-sidebar-border border-b px-3 py-3">
         <Link
           href="/"
-          className="block rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground block rounded-md px-2 py-1.5 text-sm font-medium"
         >
           New chat
         </Link>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <nav className="flex flex-col gap-0.5 p-2">
-          {conversations.map((c) => {
+          {conversations.map(c => {
             const href = `/chat/${c.id}`
             const active = pathname === href
             return (
@@ -35,10 +37,10 @@ export function Sidebar({ conversations }: { conversations: SidebarConversation[
                 key={c.id}
                 href={href}
                 className={cn(
-                  "truncate rounded-md px-2 py-2 text-left text-sm transition-colors",
+                  'truncate rounded-md px-2 py-2 text-left text-sm transition-colors',
                   active
-                    ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/90 hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground"
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                    : 'text-sidebar-foreground/90 hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground',
                 )}
                 title={c.title}
               >

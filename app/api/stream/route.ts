@@ -1,7 +1,11 @@
-import { z } from "zod"
+import { z } from 'zod'
 
-import prisma from "@/lib/prisma"
-import { readAllStreamChunks, readStreamChunksFrom, streamKey } from "@/lib/redis"
+import prisma from '@/lib/prisma'
+import {
+  readAllStreamChunks,
+  readStreamChunksFrom,
+  streamKey,
+} from '@/lib/redis'
 
 export const maxDuration = 300
 
@@ -11,17 +15,19 @@ const querySchema = z.object({
 })
 
 function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms))
+  return new Promise(r => setTimeout(r, ms))
 }
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const parsed = querySchema.safeParse({
-    conversationId: url.searchParams.get("conversationId") ?? undefined,
-    messageId: url.searchParams.get("messageId") ?? undefined,
+    conversationId: url.searchParams.get('conversationId') ?? undefined,
+    messageId: url.searchParams.get('messageId') ?? undefined,
   })
   if (!parsed.success) {
-    return new Response("Missing or invalid conversationId / messageId", { status: 400 })
+    return new Response('Missing or invalid conversationId / messageId', {
+      status: 400,
+    })
   }
   const { conversationId, messageId } = parsed.data
 
@@ -29,11 +35,11 @@ export async function GET(request: Request) {
     where: {
       id: messageId,
       conversationId,
-      role: "assistant",
+      role: 'assistant',
     },
   })
   if (!message) {
-    return new Response("Not found", { status: 404 })
+    return new Response('Not found', { status: 404 })
   }
 
   const encoder = new TextEncoder()
@@ -49,15 +55,15 @@ export async function GET(request: Request) {
       }
 
       try {
-        if (message.status !== "streaming") {
-          sendEvent("sync", { text: message.content })
-          sendEvent("done", { status: message.status })
+        if (message.status !== 'streaming') {
+          sendEvent('sync', { text: message.content })
+          sendEvent('done', { status: message.status })
           controller.close()
           return
         }
 
         const chunks = await readAllStreamChunks(key)
-        sendEvent("sync", { text: chunks.join("") })
+        sendEvent('sync', { text: chunks.join('') })
         let nextIndex = chunks.length
 
         while (!signal.aborted) {
@@ -66,27 +72,27 @@ export async function GET(request: Request) {
             select: { status: true, content: true },
           })
           if (!fresh) {
-            sendEvent("error", { message: "Message was deleted" })
+            sendEvent('error', { message: 'Message was deleted' })
             break
           }
 
           const newChunks = await readStreamChunksFrom(key, nextIndex)
           for (const text of newChunks) {
-            sendEvent("token", { text })
+            sendEvent('token', { text })
             nextIndex += 1
           }
 
-          if (fresh.status !== "streaming") {
-            sendEvent("done", { status: fresh.status })
+          if (fresh.status !== 'streaming') {
+            sendEvent('done', { status: fresh.status })
             break
           }
 
           await sleep(100)
         }
       } catch (e) {
-        console.error("stream route", e)
+        console.error('stream route', e)
         try {
-          sendEvent("error", { message: "Stream failed" })
+          sendEvent('error', { message: 'Stream failed' })
         } catch {
           /* ignore */
         }
@@ -102,10 +108,10 @@ export async function GET(request: Request) {
 
   return new Response(stream, {
     headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   })
 }

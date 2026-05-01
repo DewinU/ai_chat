@@ -1,42 +1,32 @@
-import { notFound } from "next/navigation"
+import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 
-import prisma from "@/lib/prisma"
+import prisma from '@/lib/prisma'
 
-import { ChatRoom, type ChatMessageDTO } from "./chat-room"
+import { loadChatPageData } from '../../../../lib/data'
+import { ChatRoom } from './chat-room'
+import { ChatRoomSkeleton } from './chat-room-skeleton'
 
-export default async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ChatPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { id } = await params
-  const conversation = await prisma.conversation.findUnique({
+
+  const exists = await prisma.conversation.findUnique({
     where: { id },
-    include: {
-      messages: { orderBy: { createdAt: "asc" } },
-    },
+    select: { id: true },
   })
-  if (!conversation) {
+  if (!exists) {
     notFound()
   }
 
-  const initialMessages: ChatMessageDTO[] = conversation.messages.map((m) => ({
-    id: m.id,
-    role: m.role === "user" ? "user" : "assistant",
-    content: m.content,
-    status: m.status,
-    createdAt: m.createdAt.toISOString(),
-  }))
-
-  const lastAssistant = [...conversation.messages]
-    .reverse()
-    .find((m) => m.role === "assistant")
-  const initialStreamingAssistantId =
-    lastAssistant?.status === "streaming" ? lastAssistant.id : null
+  const conversationPromise = loadChatPageData(id)
 
   return (
-    <ChatRoom
-      key={`${conversation.id}:${initialStreamingAssistantId ?? "idle"}`}
-      conversationId={conversation.id}
-      title={conversation.title}
-      initialMessages={initialMessages}
-      initialStreamingAssistantId={initialStreamingAssistantId}
-    />
+    <Suspense fallback={<ChatRoomSkeleton />}>
+      <ChatRoom conversationPromise={conversationPromise} />
+    </Suspense>
   )
 }
